@@ -1,6 +1,6 @@
 [workspace]
 exclude = ["fixtures"]
-members = ["ci", "elaborate", "generate"]
+members = ["ci", "elaborate", "elaborate-fix", "generate"]
 default-members = ["elaborate", "generate"]
 resolver = "2"
 

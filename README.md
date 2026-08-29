@@ -115,6 +115,42 @@ CLIPPY_CONF_DIR=path-to-elaborate-repo/clippy_conf cargo clippy
 
 Note that `CLIPPY_CONF_DIR` names the directory containing the `clippy.toml` file, not the `clippy.toml` file itself.
 
+## `elaborate-fix` (experimental)
+
+This repository provides an experimental `elaborate-fix` tool that replaces Rust standard library functions with wrapped ones. The tool uses [`rust-analyzer`] under the hood.
+
+Install `elaborate-fix` with command below, and run it (with no arguments) in the root of a package whose functions you would like to replace:
+
+```
+cargo install elaborate-fix
+```
+
+`elaborate-fix` does essentially the following:
+
+1. Run the [`disallowed_methods` function] to obtain the functions that can be replaced.
+1. Rewrite the relevant portions of the source code.
+1. Run the following command to add `elaborate` as a dependency.
+   ```
+   cargo add elaborate
+   ```
+1. Use `rust-analyzer`'s [`auto_import`] function to import the relevant symbols.
+1. Run the following command to eliminate unused imports:
+   ```
+   cargo fix --allow-dirty --allow-no-vcs
+   ```
+1. Run the following command to, e.g., reorganize imports:
+   ```
+   cargo fmt
+   ```
+
+Following the above steps, you may still get compile errors. For example, `Path::get_parent` and `PathContext::get_parent_wc` differ in their return types (`Option` vs. `Result`). Such issues must be addressed by hand.
+
+However, at the conclusion of the above steps, the following should be true:
+
+- Running the [`disallowed_methods` function] does not produce warnings.
+- There are no unused imports.
+- The code does not need to be formatted.
+
 ## Alternative approaches considered
 
 **Wrapper structs**, e.g., a struct `File` that wraps a [`std::fs::File`], so that calling a method on the wrapper struct calls the underlying method with [`anyhow::Context::with_context`]. This idea works to a degree but has several problems. Most significantly, the wrapper struct must implement every trait the wrapped struct does. There are many ways a wrapped struct could implement a trait. For example, if a trait provides a default implementation, the wrapped struct could use the default implementation or provide its own. Such facts complicate automatic code generation. Hence, this idea seems untenable.
@@ -141,9 +177,11 @@ Elaborate uses [`public-api`] and [`rustdoc-types`] to generate wrappers, and [`
 [Clippy configuration]: https://doc.rust-lang.org/clippy/configuration.html
 [`anyhow::Context::with_context`]: https://docs.rs/anyhow/latest/anyhow/trait.Context.html#tymethod.with_context
 [`anyhow`]: https://github.com/dtolnay/anyhow
+[`auto_import`]: https://rust-analyzer.github.io/book/assists.html#auto_import
 [`disallowed_methods` function]: https://docs.rs/elaborate/latest/elaborate/fn.disallowed_methods.html
 [`disallowed_methods` lint]: https://rust-lang.github.io/rust-clippy/master/index.html#disallowed_methods
 [`public-api`]: https://github.com/cargo-public-api/cargo-public-api/tree/main/public-api
+[`rust-analyzer`]: https://rust-analyzer.github.io/
 [`rustdoc-types`]: https://github.com/aDotInTheVoid/rustdoc-types
 [`std::fs::File`]: https://doc.rust-lang.org/std/fs/struct.File.html
 [tilde requirement]: https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#tilde-requirements
